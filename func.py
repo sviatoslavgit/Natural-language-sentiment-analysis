@@ -1,15 +1,16 @@
-import spacy
 import requests
 from bs4 import BeautifulSoup
 import translators as ts
 from langdetect import detect
+from gensim.parsing.preprocessing import preprocess_string
 
 
 def detect_language(text):
     try:
         language = detect(text)
         return language
-    except:
+    except Exception as e:
+        print("Language detection error:", e)
         return "Unable to detect"
 
 
@@ -20,7 +21,7 @@ def translate_text(text):
     if source_language == 'en':
         translated_text = ""
         for i in range(0, len(text), input_limit):
-            translated_text += ts.translate_text(str(text[i:i + input_limit]), translator='bing', from_language="en", to_language="uk")
+            translated_text += ts.google(text[i:i + input_limit], 'en', 'uk')
 
     elif source_language == 'uk':
         return text
@@ -38,14 +39,6 @@ def load_sentiment_dictionary(filename):
             sentiment_dict[word.lower()] = float(sentiment)
     return sentiment_dict
 
-
-def lemmatize_text(text, language):
-    nlp = spacy.load(language)
-    doc = nlp(text)
-    lemmatized_text = " ".join([token.lemma_ for token in doc])
-    return lemmatized_text
-
-
 def get_text_from_url(url):
     try:
         response = requests.get(url)
@@ -53,14 +46,13 @@ def get_text_from_url(url):
         paragraphs = soup.find_all('p')
         text = ' '.join([p.get_text() for p in paragraphs])
         return text
-    except Exception as exception:
-        return exception
-
+    except Exception as e:
+        print("Error retrieving text from URL:", e)
+        return None
 
 def analyze_text_sentiment(text, sentiment_dict):
-    language = 'uk_core_news_sm'
     translated_text = translate_text(text)
-    lemmatized_text = lemmatize_text(translated_text, language)
+    lemmatized_text = ' '.join(preprocess_string(translated_text))
     words = lemmatized_text.split()
     analyzed_words = []
     total_sentiment = 0
@@ -68,6 +60,7 @@ def analyze_text_sentiment(text, sentiment_dict):
     positive_words = 0
     negative_words = 0
     unknown_words = []
+
     for word in words:
         if word in sentiment_dict:
             total_sentiment += sentiment_dict[word]
@@ -80,6 +73,7 @@ def analyze_text_sentiment(text, sentiment_dict):
                 negative_words += 1
         else:
             unknown_words.append(word)
+
     if count > 0:
         average_sentiment = total_sentiment / count
     else:
