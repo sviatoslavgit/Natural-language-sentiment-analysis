@@ -39,6 +39,7 @@ def load_sentiment_dictionary(filename):
             sentiment_dict[word.lower()] = float(sentiment)
     return sentiment_dict
 
+
 def get_text_from_url(url):
     try:
         response = requests.get(url)
